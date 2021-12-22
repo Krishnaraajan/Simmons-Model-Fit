@@ -1,0 +1,59 @@
+import csv
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.optimize import curve_fit
+
+# Number of iterations to run the fit
+MAX_ITERS = int(1e6)
+
+
+def func(x, a, b):
+    return (
+        (6.2e10 / pow(a, 2))
+        * (
+            ((b - x / 2) * np.exp(-1.025 * a * pow(b - x / 2, 0.5)))
+            - ((b + x / 2) * np.exp(-1.025 * a * pow(b + x / 2, 0.5)))
+        )
+        * (1 + (3e-9 * a * a * 300 * 300 / (b - x / 2)))
+    )
+
+
+def load_data(filename):
+    xdata, ydata = [], []
+    with open(filename) as f:
+        reader = csv.reader(f, delimiter=",")
+        line = 1
+        for row in reader:
+            try:
+                x, y = float(row[0]), float(row[1])
+                xdata.append(x)
+                ydata.append(y)
+            except:
+                print(f"Skipped line {line}: {row}")
+            finally:
+                line += 1
+    return xdata, ydata
+
+
+if __name__ == "__main__":
+    # Load data
+    print("*** Loading data")
+    xdata, ydata = load_data("/Users/user/Downloads/300K.csv")
+
+    # Fit curve
+    print(
+        f"\n\n*** Computing optimal parameters over a maximum of {MAX_ITERS} iterations"
+    )
+    popt, pcov = curve_fit(func, xdata, ydata, maxfev=MAX_ITERS)
+    print("Optimal values:", popt)
+    print("Estimated covariance of the optimal values:\n", pcov)
+
+    # Plot
+    yhatdata = list(map(lambda x: func(x, *popt), xdata))
+    plt.plot(
+        xdata,
+        yhatdata,
+        "g--",
+        label=f"fit: a={popt[0]}, b={popt[1]}",
+    )
+    plt.show()
